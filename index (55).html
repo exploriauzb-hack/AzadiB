@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AzadiB — Muammo emas, nuqtai nazar</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Nunito:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --yellow: #f5e642;
+  --green: #3ecf6e;
+  --blue: #3a8ef6;
+  --bg: #f9f7f0;
+  --bg2: #f0ede3;
+  --dark: #1a1a2e;
+  --text: #1a1a2e;
+  --muted: #7a7a9a;
+  --card: #ffffff;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; cursor: none; }
+.cursor { width: 14px; height: 14px; background: var(--blue); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); transition: background 0.2s, transform 0.15s; mix-blend-mode: multiply; }
+.cursor-trail { width: 40px; height: 40px; border: 2px solid var(--green); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9998; transform: translate(-50%, -50%); transition: all 0.35s ease; opacity: 0.6; }
+nav { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 1.2rem 3rem; background: rgba(249,247,240,0.85); backdrop-filter: blur(12px); z-index: 100; border-bottom: 1.5px solid rgba(26,26,46,0.06); }
+.logo { font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 1.3rem; letter-spacing: -0.03em; color: var(--dark); cursor: none; }
+.logo .az { color: var(--blue); } .logo .di { color: var(--green); } .logo .b { color: var(--yellow); background: var(--dark); padding: 0 5px; border-radius: 4px; }
+.nav-links { display: flex; gap: 2rem; align-items: center; }
+.nav-links a { font-size: 0.82rem; font-weight: 600; letter-spacing: 0.05em; color: var(--muted); text-decoration: none; transition: color 0.2s; cursor: none; }
+.nav-links a:hover { color: var(--dark); }
+.nav-cta { background: var(--dark) !important; color: var(--yellow) !important; padding: 0.5rem 1.3rem !important; border-radius: 100px !important; }
+
+/* AUTH MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(26,26,46,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: 2rem; padding: 2.5rem; width: 100%; max-width: 420px; position: relative; }
+.modal h2 { font-family: 'Unbounded', sans-serif; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.3rem; }
+.modal p { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+.modal input { width: 100%; padding: 0.85rem 1.2rem; border: 1.5px solid rgba(26,26,46,0.12); border-radius: 100px; font-family: 'Nunito', sans-serif; font-size: 0.9rem; outline: none; margin-bottom: 0.8rem; transition: border-color 0.2s; }
+.modal input:focus { border-color: var(--blue); }
+.modal-btn { width: 100%; padding: 0.9rem; background: var(--dark); color: var(--yellow); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.95rem; border: none; border-radius: 100px; cursor: pointer; transition: transform 0.2s; margin-bottom: 0.8rem; }
+.modal-btn:hover { transform: scale(1.02); }
+.modal-switch { text-align: center; font-size: 0.82rem; color: var(--muted); }
+.modal-switch a { color: var(--blue); cursor: pointer; font-weight: 600; }
+.modal-close { position: absolute; top: 1.2rem; right: 1.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); }
+.modal-msg { font-size: 0.82rem; text-align: center; margin-bottom: 0.5rem; min-height: 1.2rem; }
+.modal-msg.err { color: #e55; } .modal-msg.ok { color: var(--green); }
+
+/* USER BAR */
+.user-bar { display: none; align-items: center; gap: 0.8rem; }
+.user-name { font-size: 0.82rem; font-weight: 600; color: var(--dark); }
+.logout-btn { background: none; border: 1.5px solid rgba(26,26,46,0.12); border-radius: 100px; padding: 0.4rem 1rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+.logout-btn:hover { border-color: #e55; color: #e55; }
+
+/* HERO */
+.hero { min-height: 100vh; display: flex; align-items: center; padding: 9rem 3rem 5rem; position: relative; overflow: hidden; }
+.hero-blobs { position: absolute; inset: 0; pointer-events: none; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.35; }
+.blob-y { width: 420px; height: 420px; background: var(--yellow); top: -80px; right: 5%; animation: floatA 8s ease-in-out infinite; }
+.blob-g { width: 320px; height: 320px; background: var(--green); bottom: 5%; left: 10%; animation: floatB 10s ease-in-out infinite; }
+.blob-b { width: 260px; height: 260px; background: var(--blue); top: 30%; right: 25%; animation: floatA 12s ease-in-out infinite reverse; }
+.hero-inner { position: relative; z-index: 1; max-width: 760px; }
+.tag-pill { display: inline-flex; align-items: center; gap: 8px; background: white; border: 1.5px solid rgba(26,26,46,0.1); border-radius: 100px; padding: 0.45rem 1.1rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2rem; animation: fadeUp 0.7s ease both; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.tag-dot { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, var(--yellow), var(--green)); animation: pulse 2.5s infinite; }
+h1 { font-family: 'Unbounded', sans-serif; font-size: clamp(2.6rem, 6.5vw, 5.2rem); font-weight: 900; line-height: 1.0; letter-spacing: -0.04em; margin-bottom: 1.8rem; animation: fadeUp 0.7s 0.1s ease both; }
+.word-muammo { position: relative; display: inline-block; color: var(--muted); }
+.word-muammo::after { content: ''; position: absolute; left: 0; bottom: 6px; right: 0; height: 3px; background: #e55; transform: rotate(-1.5deg); border-radius: 2px; }
+.word-emas { color: var(--blue); }
+.word-highlight { background: var(--yellow); color: var(--dark); padding: 0 0.12em; border-radius: 0.15em; display: inline-block; transform: rotate(-1deg); }
+.hero-sub { font-size: 1.1rem; color: var(--muted); max-width: 500px; line-height: 1.75; font-weight: 400; margin-bottom: 2.5rem; animation: fadeUp 0.7s 0.2s ease both; }
+.hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; animation: fadeUp 0.7s 0.3s ease both; }
+.btn-main { display: inline-flex; align-items: center; gap: 8px; background: var(--dark); color: var(--yellow); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.92rem; padding: 0.9rem 2rem; border-radius: 100px; text-decoration: none; border: none; cursor: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(26,26,46,0.15); }
+.btn-main:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(26,26,46,0.2); }
+.btn-outline { display: inline-flex; align-items: center; gap: 8px; background: white; color: var(--dark); font-family: 'Nunito', sans-serif; font-weight: 600; font-size: 0.92rem; padding: 0.9rem 1.8rem; border-radius: 100px; text-decoration: none; border: 1.5px solid rgba(26,26,46,0.12); cursor: none; transition: transform 0.2s, border-color 0.2s; }
+.btn-outline:hover { transform: translateY(-3px); border-color: var(--blue); }
+
+/* TICKER */
+.ticker-wrap { background: var(--dark); padding: 0.9rem 0; overflow: hidden; white-space: nowrap; }
+.ticker-inner { display: inline-block; animation: ticker 20s linear infinite; font-family: 'Unbounded', sans-serif; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.ticker-inner span { margin: 0 2rem; color: rgba(255,255,255,0.35); }
+.ticker-inner .ty { color: var(--yellow); } .ticker-inner .tg { color: var(--green); } .ticker-inner .tb { color: var(--blue); }
+
+/* SUBMIT SECTION */
+.submit-sec { padding: 5rem 3rem; background: var(--bg2); }
+.submit-box { max-width: 680px; margin: 0 auto; background: white; border-radius: 2rem; padding: 2.5rem; border: 1.5px solid rgba(26,26,46,0.07); box-shadow: 0 8px 40px rgba(26,26,46,0.06); }
+.submit-box h2 { font-family: 'Unbounded', sans-serif; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+.submit-box p { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+.submit-box textarea { width: 100%; padding: 1rem 1.2rem; border: 1.5px solid rgba(26,26,46,0.1); border-radius: 1rem; font-family: 'Nunito', sans-serif; font-size: 0.95rem; resize: vertical; min-height: 120px; outline: none; transition: border-color 0.2s; }
+.submit-box textarea:focus { border-color: var(--blue); }
+.submit-btn { margin-top: 1rem; width: 100%; padding: 1rem; background: var(--dark); color: var(--yellow); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.95rem; border: none; border-radius: 100px; cursor: pointer; transition: transform 0.2s; }
+.submit-btn:hover { transform: scale(1.02); }
+.response-box { margin-top: 1.5rem; padding: 1.2rem 1.5rem; background: rgba(62,207,110,0.08); border: 1.5px solid rgba(62,207,110,0.2); border-radius: 1rem; display: none; }
+.response-box.show { display: block; }
+.response-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--green); font-weight: 700; margin-bottom: 0.5rem; }
+.response-text { font-size: 0.92rem; color: var(--text); line-height: 1.7; font-style: italic; }
+.login-prompt { text-align: center; padding: 1.5rem; background: rgba(58,142,246,0.06); border-radius: 1rem; border: 1.5px dashed rgba(58,142,246,0.2); }
+.login-prompt p { font-size: 0.88rem; color: var(--muted); margin-bottom: 1rem; }
+
+/* EXAMPLES */
+.section { padding: 6rem 3rem; }
+.sec-label { display: inline-flex; align-items: center; gap: 10px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700; color: var(--muted); margin-bottom: 3rem; }
+.sec-label .line { width: 32px; height: 2px; background: currentColor; border-radius: 2px; }
+.examples-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.ex-card { background: white; border-radius: 1.5rem; padding: 2rem; border: 1.5px solid rgba(26,26,46,0.07); transition: transform 0.3s, box-shadow 0.3s; position: relative; overflow: hidden; }
+.ex-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(26,26,46,0.1); }
+.ex-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+.ex-card:nth-child(1)::before { background: var(--yellow); } .ex-card:nth-child(2)::before { background: var(--green); } .ex-card:nth-child(3)::before { background: var(--blue); }
+.ex-card:nth-child(4)::before { background: linear-gradient(90deg, var(--yellow), var(--green)); } .ex-card:nth-child(5)::before { background: linear-gradient(90deg, var(--green), var(--blue)); } .ex-card:nth-child(6)::before { background: linear-gradient(90deg, var(--blue), var(--yellow)); }
+.ex-muammo { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #e55; font-weight: 700; margin-bottom: 0.5rem; }
+.ex-q { font-family: 'Unbounded', sans-serif; font-size: 0.92rem; font-weight: 700; color: var(--dark); margin-bottom: 1.2rem; line-height: 1.4; letter-spacing: -0.02em; }
+.ex-divider { display: flex; align-items: center; gap: 8px; margin-bottom: 1.2rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--green); font-weight: 700; }
+.ex-divider::before, .ex-divider::after { content: ''; flex: 1; height: 1px; background: rgba(26,26,46,0.08); }
+.ex-a { font-size: 0.85rem; color: var(--muted); line-height: 1.7; font-weight: 400; font-style: italic; }
+
+/* ── WORLD / POSTS SECTION ── */
+.world-sec { padding: 6rem 3rem; background: var(--bg); }
+.world-sec .sec-label { margin-bottom: 2rem; }
+.world-filter-row { display: flex; gap: 0.8rem; margin-bottom: 2.5rem; flex-wrap: wrap; }
+.world-filter-btn { padding: 0.45rem 1.1rem; border-radius: 100px; border: 1.5px solid rgba(26,26,46,0.12); background: white; font-family: 'Nunito', sans-serif; font-size: 0.78rem; font-weight: 700; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.world-filter-btn:hover { border-color: var(--dark); color: var(--dark); }
+.world-filter-btn.active { background: var(--dark); color: var(--yellow); border-color: var(--dark); }
+.world-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+.world-card { background: white; border-radius: 1.5rem; padding: 1.8rem; border: 1.5px solid rgba(26,26,46,0.07); transition: transform 0.3s, box-shadow 0.3s; position: relative; overflow: hidden; cursor: pointer; }
+.world-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(26,26,46,0.1); }
+.world-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.world-card[data-type="sher"]::before { background: var(--yellow); }
+.world-card[data-type="mulohaza"]::before { background: var(--blue); }
+.world-card[data-type="fikr"]::before { background: var(--green); }
+.world-type-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.8rem; padding: 3px 10px; border-radius: 100px; }
+.world-type-pill.sher { background: rgba(245,230,66,0.15); color: #b8a900; }
+.world-type-pill.mulohaza { background: rgba(58,142,246,0.12); color: var(--blue); }
+.world-type-pill.fikr { background: rgba(62,207,110,0.12); color: #2aaa56; }
+.world-card-title { font-family: 'Unbounded', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--dark); margin-bottom: 0.8rem; line-height: 1.35; letter-spacing: -0.02em; }
+.world-card-content { font-size: 0.85rem; color: var(--muted); line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.world-card-date { margin-top: 1rem; font-size: 0.7rem; color: rgba(26,26,46,0.3); font-weight: 600; }
+.world-empty { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+.world-empty .icon { font-size: 2.5rem; display: block; margin-bottom: 0.8rem; }
+.world-loading { text-align: center; padding: 3rem; }
+.world-spinner { width: 28px; height: 28px; border: 2.5px solid rgba(26,26,46,0.1); border-top-color: var(--dark); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+
+/* POST DETAIL OVERLAY */
+.post-overlay { position: fixed; inset: 0; background: rgba(26,26,46,0.55); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); padding: 2rem; }
+.post-overlay.open { display: flex; }
+.post-modal { background: white; border-radius: 2rem; padding: 2.5rem; width: 100%; max-width: 560px; position: relative; max-height: 85vh; overflow-y: auto; animation: fadeUp 0.3s ease; }
+.post-modal-close { position: absolute; top: 1.2rem; right: 1.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); }
+.post-modal-type { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem; padding: 3px 10px; border-radius: 100px; }
+.post-modal-type.sher { background: rgba(245,230,66,0.15); color: #b8a900; }
+.post-modal-type.mulohaza { background: rgba(58,142,246,0.12); color: var(--blue); }
+.post-modal-type.fikr { background: rgba(62,207,110,0.12); color: #2aaa56; }
+.post-modal-title { font-family: 'Unbounded', sans-serif; font-size: 1.3rem; font-weight: 900; color: var(--dark); margin-bottom: 1.2rem; line-height: 1.3; letter-spacing: -0.03em; }
+.post-modal-content { font-size: 0.92rem; color: var(--text); line-height: 1.8; white-space: pre-wrap; }
+.post-modal-date { margin-top: 1.5rem; font-size: 0.72rem; color: var(--muted); font-weight: 600; border-top: 1.5px solid rgba(26,26,46,0.07); padding-top: 1rem; }
+
+/* CTA */
+.cta-banner { margin: 2rem 3rem 6rem; background: var(--dark); border-radius: 2rem; padding: 4rem 3rem; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2rem; position: relative; overflow: hidden; }
+.cta-blob-y { position: absolute; width: 300px; height: 300px; background: var(--yellow); border-radius: 50%; filter: blur(80px); opacity: 0.12; top: -100px; right: -50px; }
+.cta-blob-g { position: absolute; width: 200px; height: 200px; background: var(--green); border-radius: 50%; filter: blur(60px); opacity: 0.1; bottom: -60px; left: 20%; }
+.cta-text { position: relative; z-index: 1; }
+.cta-text h2 { font-family: 'Unbounded', sans-serif; font-size: clamp(1.6rem, 3.5vw, 2.5rem); font-weight: 900; letter-spacing: -0.04em; color: white; line-height: 1.15; margin-bottom: 0.8rem; }
+.cta-text h2 span { color: var(--yellow); }
+.cta-text p { color: rgba(255,255,255,0.5); font-size: 0.9rem; font-weight: 300; }
+.btn-cta { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; background: var(--yellow); color: var(--dark); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.92rem; padding: 1rem 2rem; border-radius: 100px; text-decoration: none; border: none; cursor: none; white-space: nowrap; transition: transform 0.2s; }
+.btn-cta:hover { transform: scale(1.04); }
+
+footer { border-top: 1.5px solid rgba(26,26,46,0.08); padding: 2rem 3rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+footer p { font-size: 0.75rem; color: var(--muted); }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes floatA { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-30px) scale(1.05); } }
+@keyframes floatB { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(20px) rotate(3deg); } }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.on { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 768px) {
+  nav { padding: 1rem 1.5rem; } .nav-links { display: none; }
+  .hero { padding: 7rem 1.5rem 4rem; }
+  .section, .submit-sec, .world-sec { padding: 4rem 1.5rem; }
+  .examples-grid { grid-template-columns: 1fr; }
+  .world-grid { grid-template-columns: 1fr; }
+  .cta-banner { margin: 1rem 1.5rem 4rem; grid-template-columns: 1fr; padding: 2.5rem 1.5rem; }
+  footer { padding: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cur"></div>
+<div class="cursor-trail" id="trail"></div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h2 id="modalTitle">Kirish</h2>
+    <p id="modalSubtitle">Muammolaringizni saqlash uchun kiring</p>
+    <div class="modal-msg" id="modalMsg"></div>
+    <input type="email" id="authEmail" placeholder="Email">
+    <input type="password" id="authPassword" placeholder="Parol">
+    <button class="modal-btn" onclick="handleAuth()">Kirish</button>
+    <div class="modal-switch">
+      Akkaunt yo'qmi? <a onclick="toggleAuthMode()">Ro'yxatdan o'tish</a>
+    </div>
+  </div>
+</div>
+
+<!-- POST DETAIL OVERLAY -->
+<div class="post-overlay" id="postOverlay">
+  <div class="post-modal">
+    <button class="post-modal-close" onclick="closePost()">×</button>
+    <div id="postDetail"></div>
+  </div>
+</div>
+
+<nav>
+  <div class="logo" onclick="scrollTo(0,0)"><span class="az">Az</span><span class="di">adi</span><span class="b">B</span></div>
+  <div class="nav-links">
+    <a href="#misollar">Misollar</a>
+    <a href="#world">World</a>
+    <a href="#yuborish">Muammoyim</a>
+    <div class="user-bar" id="userBar">
+      <span class="user-name" id="userName"></span>
+      <button class="logout-btn" onclick="handleLogout()">Chiqish</button>
+    </div>
+    <a href="#" class="nav-cta" id="loginBtn" onclick="openModal(event)">Kirish →</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-blobs">
+    <div class="blob blob-y"></div>
+    <div class="blob blob-g"></div>
+    <div class="blob blob-b"></div>
+  </div>
+  <div class="hero-inner">
+    <div class="tag-pill"><div class="tag-dot"></div>Psixologik ozodlik platformasi</div>
+    <h1><span class="word-muammo">Muammo</span><br>aslida <span class="word-emas">muammo</span><br><span class="word-highlight">emas</span></h1>
+    <p class="hero-sub">Ko'p narsani muammo deb o'ylaymiz — aslida ular shunchaki hayotning bir qismi. AzadiB orqali nuqtai nazaringizni o'zgartiring.</p>
+    <div class="hero-btns">
+      <a href="#yuborish" class="btn-main">Muammoimni yuboraman ↗</a>
+      <a href="#world" class="btn-outline">World'ni ko'rish →</a>
+    </div>
+  </div>
+</section>
+
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <span class="ty">Stress emas</span><span>✦</span><span class="tg">Nuqtai nazar</span><span>✦</span><span class="tb">Ozodlik</span><span>✦</span><span>Muammo yo'q</span><span>✦</span><span class="ty">Yengil nafas</span><span>✦</span><span class="tg">Tushunish</span><span>✦</span><span class="tb">AzadiB</span><span>✦</span><span>Hayot davom etadi</span><span>✦</span>
+    <span class="ty">Stress emas</span><span>✦</span><span class="tg">Nuqtai nazar</span><span>✦</span><span class="tb">Ozodlik</span><span>✦</span><span>Muammo yo'q</span><span>✦</span><span class="ty">Yengil nafas</span><span>✦</span><span class="tg">Tushunish</span><span>✦</span><span class="tb">AzadiB</span><span>✦</span><span>Hayot davom etadi</span><span>✦</span>
+  </div>
+</div>
+
+<!-- MUAMMO YUBORISH -->
+<section class="submit-sec reveal" id="yuborish">
+  <div class="submit-box">
+    <h2>Muammoyingizni yozing</h2>
+    <p>Hech qanday qoida yo'q — ichingizdan nima chiqsa, yozing</p>
+    <div id="submitArea">
+      <textarea id="problemText" placeholder="Masalan: Hech kimga yoqmayman, yolg'iz qolaman..."></textarea>
+      <button class="submit-btn" onclick="submitProblem()">AzadiB ko'zi bilan ko'rish ↗</button>
+    </div>
+    <div id="loginPromptBox" class="login-prompt" style="display:none">
+      <p>Muammoyingizni saqlash va javob olish uchun kiring yoki ro'yxatdan o'ting</p>
+      <button class="btn-main" style="width:100%;justify-content:center" onclick="openModal(event)">Kirish / Ro'yxatdan o'tish</button>
+    </div>
+    <div class="response-box" id="responseBox">
+      <div class="response-label">AzadiB javobi</div>
+      <div class="response-text" id="responseText"></div>
+    </div>
+  </div>
+</section>
+
+<!-- WORLD — POSTLAR -->
+<section class="world-sec reveal" id="world">
+  <div class="sec-label"><div class="line"></div>World — Fikrlar & Sherlar<div class="line"></div></div>
+  <div class="world-filter-row">
+    <button class="world-filter-btn active" data-filter="all" onclick="filterWorld(this,'all')">✦ Barchasi</button>
+    <button class="world-filter-btn" data-filter="sher" onclick="filterWorld(this,'sher')">🖋 Sherlar</button>
+    <button class="world-filter-btn" data-filter="mulohaza" onclick="filterWorld(this,'mulohaza')">💭 Mulohazalar</button>
+    <button class="world-filter-btn" data-filter="fikr" onclick="filterWorld(this,'fikr')">✦ Fikrlar</button>
+  </div>
+  <div class="world-grid" id="worldGrid">
+    <div class="world-loading"><div class="world-spinner"></div><div style="font-size:0.82rem;color:var(--muted)">Yuklanmoqda...</div></div>
+  </div>
+</section>
+
+<section class="section reveal" id="misollar">
+  <div class="sec-label"><div class="line"></div>Misollar<div class="line"></div></div>
+  <div class="examples-grid">
+    <div class="ex-card reveal">
+      <div class="ex-muammo">❝ Muammo ❞</div>
+      <div class="ex-q">Hech kimga yoqmayman, yolg'iz qolaman</div>
+      <div class="ex-divider">Aslida</div>
+      <div class="ex-a">Hamma odamga yoqish mumkin emas — bu insoniy. Yolg'izlik ba'zan o'zingiz bilan bo'lish imkoni, muammo emas.</div>
+    </div>
+    <div class="ex-card reveal">
+      <div class="ex-muammo">❝ Muammo ❞</div>
+      <div class="ex-q">Ishda xato qildim, endi hammasi tugadi</div>
+      <div class="ex-divider">Aslida</div>
+      <div class="ex-a">Xato — o'sishning belgisi. Hech qachon xato qilmagan odam hech narsa urinmagan odam.</div>
+    </div>
+    <div class="ex-card reveal">
+      <div class="ex-muammo">❝ Muammo ❞</div>
+      <div class="ex-q">Kechikdim, endi kun buzildi</div>
+      <div class="ex-divider">Aslida</div>
+      <div class="ex-a">Bir kechikish — kun emas, shunchaki bir daqiqaning yo'qolishi. Yangi boshlanish har daqiqada mumkin.</div>
+    </div>
+    <div class="ex-card reveal">
+      <div class="ex-muammo">❝ Muammo ❞</div>
+      <div class="ex-q">Pulim yo'q, baxtli bo'la olmayman</div>
+      <div class="ex-divider">Aslida</div>
+      <div class="ex-a">Baxt va pul ko'pincha aloqasiz. Eng xotirjam odamlar resurslarni emas, ma'noni topganlar.</div>
+    </div>
+    <div class="ex-card reveal">
+      <div class="ex-muammo">❝ Muammo ❞</div>
+      <div class="ex-q">Yoshi ulg'ayib qoldim, kech bo'ldi</div>
+      <div class="ex-divider">Aslida</div>
+      <div class="ex-a">Hech narsa uchun kech emas. Eng katta o'zgarishlar ko'pincha "kech" deb o'ylaganda boshlanadi.</div>
+    </div>
+    <div class="ex-card reveal">
+      <div class="ex-muammo">❝ Muammo ❞</div>
+      <div class="ex-q">Uyqum yaxshi bo'lmadi, ketchki dam</div>
+      <div class="ex-divider">Aslida</div>
+      <div class="ex-a">Bir tun yomon uyqu — falokat emas. Tana o'zi moslashadi. Bugungi kun yangi.</div>
+    </div>
+  </div>
+</section>
+
+<div class="cta-banner reveal">
+  <div class="cta-blob-y"></div><div class="cta-blob-g"></div>
+  <div class="cta-text">
+    <h2>Muammoyingizni<br><span>AzadiB</span>ga yuboring</h2>
+    <p>Minglab odamlar allaqachon yengil nafas oldi.</p>
+  </div>
+  <a href="#yuborish" class="btn-cta">Hoziroq boshlash ↗</a>
+</div>
+
+<footer>
+  <div class="logo"><span class="az">Az</span><span class="di">adi</span><span class="b">B</span></div>
+  <p>© 2025 AzadiB — Psixologik ozodlik platformasi</p>
+  <p>Toshkent, O'zbekiston</p>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://oxpbltvnbjzxqwsxrpvg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94cGJsdHZuYmp6eHF3c3hycHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNDIxNzAsImV4cCI6MjA5NTgxODE3MH0.a_-0iKSBa8l2mr4bte6ay3g5tcgSukFA4i72YX6naQQ';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let isLogin = true;
+let currentUser = null;
+let allPosts = [];
+let currentFilter = 'all';
+
+const responses = [
+  "Bu his — muammo emas, insoniy holat. Ko'p odamlar shuni his qiladi. O'zingizga mehribon bo'ling.",
+  "Aslida bu vaziyat sizni o'stirmoqda. Qiyinchilik — o'sishning belgisi.",
+  "Nuqtai nazarni o'zgartirsak: bu muammo emas, balki hayotning bir tajribasi.",
+  "Ko'p odamlar xuddi shu his bilan yashaydi. Siz yolg'iz emassiz.",
+  "Bu hissiyot o'tkinchi. Ertaga dunyo boshqacha ko'rinishi mumkin.",
+  "O'zingizga savol bering: 5 yildan keyin bu shu qadar muhim bo'ladimi? Ko'pincha yo'q.",
+];
+
+// ── AUTH ──
+async function checkUser() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (user) { currentUser = user; showUserBar(user.email); }
+}
+function showUserBar(email) {
+  document.getElementById('loginBtn').style.display = 'none';
+  const ub = document.getElementById('userBar');
+  ub.style.display = 'flex';
+  document.getElementById('userName').textContent = email.split('@')[0];
+  document.getElementById('submitArea').style.display = 'block';
+  document.getElementById('loginPromptBox').style.display = 'none';
+}
+function hideUserBar() {
+  document.getElementById('loginBtn').style.display = '';
+  document.getElementById('userBar').style.display = 'none';
+  currentUser = null;
+}
+function openModal(e) { if(e) e.preventDefault(); document.getElementById('authModal').classList.add('open'); }
+function closeModal() { document.getElementById('authModal').classList.remove('open'); }
+function toggleAuthMode() {
+  isLogin = !isLogin;
+  document.getElementById('modalTitle').textContent = isLogin ? 'Kirish' : "Ro'yxatdan o'tish";
+  document.getElementById('modalSubtitle').textContent = isLogin ? 'Muammolaringizni saqlash uchun kiring' : 'Bepul hisob yarating';
+  document.querySelector('.modal-btn').textContent = isLogin ? 'Kirish' : "Ro'yxatdan o'tish";
+  document.querySelector('.modal-switch a').textContent = isLogin ? "Ro'yxatdan o'tish" : 'Kirish';
+  document.getElementById('modalMsg').textContent = '';
+}
+async function handleAuth() {
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const msg = document.getElementById('modalMsg');
+  if (!email || !password) { msg.className = 'modal-msg err'; msg.textContent = 'Email va parol kiriting'; return; }
+  msg.className = 'modal-msg'; msg.textContent = 'Yuklanmoqda...';
+  if (isLogin) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { msg.className = 'modal-msg err'; msg.textContent = 'Xato: ' + error.message; return; }
+    currentUser = data.user; showUserBar(email); closeModal();
+  } else {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) { msg.className = 'modal-msg err'; msg.textContent = 'Xato: ' + error.message; return; }
+    msg.className = 'modal-msg ok'; msg.textContent = "Emailingizni tasdiqlang, keyin kiring!";
+  }
+}
+async function handleLogout() {
+  await sb.auth.signOut();
+  hideUserBar();
+}
+
+// ── MUAMMO YUBORISH ──
+async function submitProblem() {
+  const text = document.getElementById('problemText').value.trim();
+  if (!text) return;
+  const btn = document.querySelector('.submit-btn');
+  btn.textContent = 'Tahlil qilinmoqda...';
+  btn.disabled = true;
+  const answer = responses[Math.floor(Math.random() * responses.length)];
+  if (currentUser) {
+    const { data: prob } = await sb.from('problems').insert({ user_id: currentUser.id, text }).select().single();
+    if (prob) await sb.from('responses').insert({ problem_id: prob.id, answer, ai_used: false });
+  }
+  document.getElementById('responseText').textContent = answer;
+  document.getElementById('responseBox').classList.add('show');
+  btn.textContent = "AzadiB ko'zi bilan ko'rish ↗";
+  btn.disabled = false;
+}
+
+// ── WORLD / POSTS ──
+async function loadWorldPosts() {
+  const { data, error } = await sb.from('posts').select('*').order('created_at', { ascending: false });
+  allPosts = data || [];
+  renderWorldPosts();
+}
+function filterWorld(btn, type) {
+  document.querySelectorAll('.world-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = type;
+  renderWorldPosts();
+}
+function renderWorldPosts() {
+  const grid = document.getElementById('worldGrid');
+  const filtered = currentFilter === 'all' ? allPosts : allPosts.filter(p => p.type === currentFilter);
+  const typeLabels = { sher: '🖋 Sher', mulohaza: '💭 Mulohaza', fikr: '✦ Fikr' };
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="world-empty"><span class="icon">✦</span>Hali post yo\'q</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(p => `
+    <div class="world-card" data-type="${esc(p.type)}" onclick='openPost(${JSON.stringify(p)})'>
+      <div class="world-type-pill ${esc(p.type)}">${typeLabels[p.type] || p.type}</div>
+      <div class="world-card-title">${esc(p.title)}</div>
+      <div class="world-card-content">${esc(p.content)}</div>
+      <div class="world-card-date">${fmtDate(p.created_at)}</div>
+    </div>
+  `).join('');
+}
+function openPost(p) {
+  const typeLabels = { sher: '🖋 Sher', mulohaza: '💭 Mulohaza', fikr: '✦ Fikr' };
+  document.getElementById('postDetail').innerHTML = `
+    <div class="post-modal-type ${esc(p.type)}">${typeLabels[p.type] || p.type}</div>
+    <div class="post-modal-title">${esc(p.title)}</div>
+    <div class="post-modal-content">${esc(p.content)}</div>
+    <div class="post-modal-date">${fmtDateFull(p.created_at)}</div>
+  `;
+  document.getElementById('postOverlay').classList.add('open');
+}
+function closePost() { document.getElementById('postOverlay').classList.remove('open'); }
+document.getElementById('postOverlay').addEventListener('click', e => { if(e.target === e.currentTarget) closePost(); });
+
+// ── UTILS ──
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString('uz-UZ', {day:'2-digit',month:'2-digit',year:'numeric'}) : ''; }
+function fmtDateFull(iso) { return iso ? new Date(iso).toLocaleString('uz-UZ') : ''; }
+
+// Cursor
+const cur = document.getElementById('cur'), trail = document.getElementById('trail');
+let mx = 0, my = 0, tx = 0, ty = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cur.style.left = mx+'px'; cur.style.top = my+'px'; });
+(function animTrail() { tx += (mx-tx)*0.1; ty += (my-ty)*0.1; trail.style.left = tx+'px'; trail.style.top = ty+'px'; requestAnimationFrame(animTrail); })();
+document.querySelectorAll('a, button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cur.style.transform='translate(-50%,-50%) scale(2.2)'; cur.style.background='#3ecf6e'; });
+  el.addEventListener('mouseleave', () => { cur.style.transform='translate(-50%,-50%) scale(1)'; cur.style.background='#3a8ef6'; });
+});
+
+// Scroll reveal
+const obs = new IntersectionObserver(entries => { entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('on'); }); }, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+// Init
+checkUser();
+loadWorldPosts();
+setTimeout(() => { if (!currentUser) { document.getElementById('submitArea').style.display='none'; document.getElementById('loginPromptBox').style.display='block'; } }, 500);
+</script>
+</body>
+</html>
